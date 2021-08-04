@@ -83,6 +83,7 @@ then using the CJSON_API_VISIBILITY flag to "export" the same symbols the way CJ
 #define CJSON_VERSION_MINOR 7
 #define CJSON_VERSION_PATCH 14
 
+#include <inttypes.h>
 #include <stddef.h>
 
 /* cJSON Types: */
@@ -98,6 +99,7 @@ then using the CJSON_API_VISIBILITY flag to "export" the same symbols the way CJ
 
 #define cJSON_IsReference 256
 #define cJSON_StringIsConst 512
+#define cJSON_NumberIsInt 1024
 
 /* The cJSON structure: */
 typedef struct cJSON
@@ -114,7 +116,7 @@ typedef struct cJSON
     /* The item's string, if type==cJSON_String  and type == cJSON_Raw */
     char *valuestring;
     /* writing to valueint is DEPRECATED, use cJSON_SetNumberValue instead */
-    int valueint;
+    intmax_t valueint;
     /* The item's number, if type==cJSON_Number */
     double valuedouble;
 
@@ -186,6 +188,7 @@ CJSON_PUBLIC(cJSON_bool) cJSON_IsTrue(const cJSON * const item);
 CJSON_PUBLIC(cJSON_bool) cJSON_IsBool(const cJSON * const item);
 CJSON_PUBLIC(cJSON_bool) cJSON_IsNull(const cJSON * const item);
 CJSON_PUBLIC(cJSON_bool) cJSON_IsNumber(const cJSON * const item);
+CJSON_PUBLIC(cJSON_bool) cJSON_IsInt(const cJSON *const item);
 CJSON_PUBLIC(cJSON_bool) cJSON_IsString(const cJSON * const item);
 CJSON_PUBLIC(cJSON_bool) cJSON_IsArray(const cJSON * const item);
 CJSON_PUBLIC(cJSON_bool) cJSON_IsObject(const cJSON * const item);
@@ -197,6 +200,7 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateTrue(void);
 CJSON_PUBLIC(cJSON *) cJSON_CreateFalse(void);
 CJSON_PUBLIC(cJSON *) cJSON_CreateBool(cJSON_bool boolean);
 CJSON_PUBLIC(cJSON *) cJSON_CreateNumber(double num);
+CJSON_PUBLIC(cJSON *) cJSON_CreateInt(intmax_t num);
 CJSON_PUBLIC(cJSON *) cJSON_CreateString(const char *string);
 /* raw json */
 CJSON_PUBLIC(cJSON *) cJSON_CreateRaw(const char *raw);
@@ -213,7 +217,7 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateArrayReference(const cJSON *child);
 
 /* These utilities create an Array of count items.
  * The parameter count cannot be greater than the number of elements in the number array, otherwise array access will be out of bounds.*/
-CJSON_PUBLIC(cJSON *) cJSON_CreateIntArray(const int *numbers, int count);
+CJSON_PUBLIC(cJSON *) cJSON_CreateIntArray(const intmax_t *numbers, int count);
 CJSON_PUBLIC(cJSON *) cJSON_CreateFloatArray(const float *numbers, int count);
 CJSON_PUBLIC(cJSON *) cJSON_CreateDoubleArray(const double *numbers, int count);
 CJSON_PUBLIC(cJSON *) cJSON_CreateStringArray(const char *const *strings, int count);

@@ -231,9 +231,9 @@ static void cjson_set_number_value_should_set_numbers(void)
     TEST_ASSERT_EQUAL(-1, number->valueint);
     TEST_ASSERT_EQUAL_DOUBLE(-1.5, number->valuedouble);
 
-    cJSON_SetNumberValue(number, 1 + (double)INT_MAX);
-    TEST_ASSERT_EQUAL(INT_MAX, number->valueint);
-    TEST_ASSERT_EQUAL_DOUBLE(1 + (double)INT_MAX, number->valuedouble);
+    cJSON_SetNumberValue(number, 1 + (double)INTMAX_MAX);
+    TEST_ASSERT_EQUAL(INTMAX_MAX, number->valueint);
+    TEST_ASSERT_EQUAL_DOUBLE(1 + (double)INTMAX_MAX, number->valuedouble);
 
     cJSON_SetNumberValue(number, -1 + (double)INT_MIN);
     TEST_ASSERT_EQUAL(INT_MIN, number->valueint);

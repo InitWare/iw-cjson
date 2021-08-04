@@ -305,6 +305,7 @@ typedef struct
 static cJSON_bool parse_number(cJSON * const item, parse_buffer * const input_buffer)
 {
     double number = 0;
+    intmax_t integer = 0;
     unsigned char *after_end = NULL;
     unsigned char number_c_string[64];
     unsigned char decimal_point = get_decimal_point();
@@ -356,23 +357,17 @@ loop_end:
         return false; /* parse_error */
     }
 
-    item->valuedouble = number;
+    integer = strtoimax((const char *) number_c_string, (char **) &after_end, 10);
 
-    /* use saturation in case of overflow */
-    if (number >= INT_MAX)
-    {
-        item->valueint = INT_MAX;
-    }
-    else if (number <= (double)INT_MIN)
-    {
-        item->valueint = INT_MIN;
-    }
-    else
-    {
-        item->valueint = (int)number;
-    }
+    item->valuedouble = number;
+    item->valueint = integer;
 
     item->type = cJSON_Number;
+
+    if (number_c_string != after_end && integer > INTMAX_MIN && integer < INTMAX_MAX)
+    {
+	    item->type = item->type | cJSON_NumberIsInt;
+    }
 
     input_buffer->offset += (size_t)(after_end - number_c_string);
     return true;
@@ -381,13 +376,13 @@ loop_end:
 /* don't ask me, but the original cJSON_SetNumberValue returns an integer or double */
 CJSON_PUBLIC(double) cJSON_SetNumberHelper(cJSON *object, double number)
 {
-    if (number >= INT_MAX)
+    if (number >= INTMAX_MAX)
     {
-        object->valueint = INT_MAX;
+        object->valueint = INTMAX_MAX;
     }
-    else if (number <= (double)INT_MIN)
+    else if (number <= (double)INTMAX_MIN)
     {
-        object->valueint = INT_MIN;
+        object->valueint = INTMAX_MIN;
     }
     else
     {
@@ -545,66 +540,85 @@ static cJSON_bool compare_double(double a, double b)
 static cJSON_bool print_number(const cJSON * const item, printbuffer * const output_buffer)
 {
     unsigned char *output_pointer = NULL;
-    double d = item->valuedouble;
     int length = 0;
     size_t i = 0;
-    unsigned char number_buffer[26] = {0}; /* temporary buffer to print the number into */
-    unsigned char decimal_point = get_decimal_point();
-    double test = 0.0;
 
-    if (output_buffer == NULL)
+    if (item->type & cJSON_NumberIsInt)
     {
-        return false;
-    }
+        size_t length = snprintf(NULL, 255, "%" PRIiMAX, item->valueint);
 
-    /* This checks for NaN and Infinity */
-    if (isnan(d) || isinf(d))
-    {
-        length = sprintf((char*)number_buffer, "null");
+        output_pointer = ensure(output_buffer, length + sizeof(""));
+        if (output_pointer == NULL)
+        {
+            return false;
+        }
+
+        snprintf(output_pointer, 255, "%" PRIiMAX, item->valueint);
+        output_pointer[length + 1] = '\0';
+        output_buffer->offset += (size_t)length;
     }
     else
     {
-        /* Try 15 decimal places of precision to avoid nonsignificant nonzero digits */
-        length = sprintf((char*)number_buffer, "%1.15g", d);
+        double d = item->valuedouble;
+        unsigned char number_buffer[26] = {0}; /* temporary buffer to print the number into */
+        unsigned char decimal_point = get_decimal_point();
+        double test = 0.0;
 
-        /* Check whether the original double can be recovered */
-        if ((sscanf((char*)number_buffer, "%lg", &test) != 1) || !compare_double((double)test, d))
+        if (output_buffer == NULL)
         {
-            /* If not, print with 17 decimal places of precision */
-            length = sprintf((char*)number_buffer, "%1.17g", d);
-        }
-    }
-
-    /* sprintf failed or buffer overrun occurred */
-    if ((length < 0) || (length > (int)(sizeof(number_buffer) - 1)))
-    {
-        return false;
-    }
-
-    /* reserve appropriate space in the output */
-    output_pointer = ensure(output_buffer, (size_t)length + sizeof(""));
-    if (output_pointer == NULL)
-    {
-        return false;
-    }
-
-    /* copy the printed number to the output and replace locale
-     * dependent decimal point with '.' */
-    for (i = 0; i < ((size_t)length); i++)
-    {
-        if (number_buffer[i] == decimal_point)
-        {
-            output_pointer[i] = '.';
-            continue;
+            return false;
         }
 
-        output_pointer[i] = number_buffer[i];
-    }
-    output_pointer[i] = '\0';
+        /* This checks for NaN and Infinity */
+        if (isnan(d) || isinf(d))
+        {
+            length = sprintf((char*)number_buffer, "null");
+        }
+        else
+        {
+            /* Try 15 decimal places of precision to avoid nonsignificant nonzero digits */
+            length = sprintf((char*)number_buffer, "%1.15g", d);
 
-    output_buffer->offset += (size_t)length;
+            /* Check whether the original double can be recovered */
+            if ((sscanf((char*)number_buffer, "%lg", &test) != 1) || !compare_double((double)test, d))
+            {
+                /* If not, print with 17 decimal places of precision */
+                length = sprintf((char*)number_buffer, "%1.17g", d);
+            }
+        }
+
+        /* sprintf failed or buffer overrun occurred */
+        if ((length < 0) || (length > (int)(sizeof(number_buffer) - 1)))
+        {
+            return false;
+        }
+
+        /* reserve appropriate space in the output */
+        output_pointer = ensure(output_buffer, (size_t)length + sizeof(""));
+        if (output_pointer == NULL)
+        {
+            return false;
+        }
+
+        /* copy the printed number to the output and replace locale
+        * dependent decimal point with '.' */
+        for (i = 0; i < ((size_t)length); i++)
+        {
+            if (number_buffer[i] == decimal_point)
+            {
+                output_pointer[i] = '.';
+                continue;
+            }
+
+            output_pointer[i] = number_buffer[i];
+        }
+        output_pointer[i] = '\0';
+
+        output_buffer->offset += (size_t)length;
+    }
 
     return true;
+
 }
 
 /* parse 4 digit hexadecimal number */
@@ -2426,18 +2440,31 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateNumber(double num)
         item->valuedouble = num;
 
         /* use saturation in case of overflow */
-        if (num >= INT_MAX)
+        if (num >= INTMAX_MAX)
         {
-            item->valueint = INT_MAX;
+            item->valueint = INTMAX_MAX;
         }
-        else if (num <= (double)INT_MIN)
+        else if (num <= (double)INTMAX_MIN)
         {
-            item->valueint = INT_MIN;
+            item->valueint = INTMAX_MIN;
         }
         else
         {
             item->valueint = (int)num;
         }
+    }
+
+    return item;
+}
+
+CJSON_PUBLIC(cJSON *) cJSON_CreateInt(intmax_t num)
+{
+    cJSON *item = cJSON_New_Item(&global_hooks);
+    if(item)
+    {
+        item->type = cJSON_Number | cJSON_NumberIsInt;
+        item->valueint = num;
+        item->valuedouble = num;
     }
 
     return item;
@@ -2533,7 +2560,7 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateObject(void)
 }
 
 /* Create Arrays: */
-CJSON_PUBLIC(cJSON *) cJSON_CreateIntArray(const int *numbers, int count)
+CJSON_PUBLIC(cJSON *) cJSON_CreateIntArray(const intmax_t *numbers, int count)
 {
     size_t i = 0;
     cJSON *n = NULL;

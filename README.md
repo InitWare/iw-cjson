@@ -195,7 +195,7 @@ The type can be one of the following:
 * `cJSON_False` (check with `cJSON_IsFalse`): Represents a `false` boolean value. You can also check for boolean values in general with `cJSON_IsBool`.
 * `cJSON_True` (check with `cJSON_IsTrue`): Represents a `true` boolean value. You can also check for boolean values in general with `cJSON_IsBool`.
 * `cJSON_NULL` (check with `cJSON_IsNull`): Represents a `null` value.
-* `cJSON_Number` (check with `cJSON_IsNumber`): Represents a number value. The value is stored as a double in `valuedouble` and also in `valueint`. If the number is outside of the range of an integer, `INT_MAX` or `INT_MIN` are used for `valueint`.
+* `cJSON_Number` (check with `cJSON_IsNumber`): Represents a number value. The value is stored as a double in `valuedouble` and also in `valueint`. If the number is outside of the range of an integer, `INTMAX_MAX` or `INTMAX_MIN` are used for `valueint`.
 * `cJSON_String` (check with `cJSON_IsString`): Represents a string value. It is stored in the form of a zero terminated string in `valuestring`.
 * `cJSON_Array` (check with `cJSON_IsArray`): Represent an array value. This is implemented by pointing `child` to a linked list of `cJSON` items that represent the values in the array. The elements are linked together using `next` and `prev`, where the first element has `prev.next == NULL` and the last element `next == NULL`.
 * `cJSON_Object` (check with `cJSON_IsObject`): Represents an object value. Objects are stored same way as an array, the only difference is that the items in the object store their keys in `string`.
@@ -218,7 +218,7 @@ it gets deleted as well. You also could use `cJSON_SetValuestring` to change a `
 
 * **null** is created with `cJSON_CreateNull`
 * **booleans** are created with `cJSON_CreateTrue`, `cJSON_CreateFalse` or `cJSON_CreateBool`
-* **numbers** are created with `cJSON_CreateNumber`. This will set both `valuedouble` and `valueint`. If the number is outside of the range of an integer, `INT_MAX` or `INT_MIN` are used for `valueint`
+* **numbers** are created with `cJSON_CreateNumber`. This will set both `valuedouble` and `valueint`. If the number is outside of the range of an integer, `INTMAX_MAX` or `INTMAX_MIN` are used for `valueint`
 * **strings** are created with `cJSON_CreateString` (copies the string) or with `cJSON_CreateStringReference` (directly points to the string. This means that `valuestring` won't be deleted by `cJSON_Delete` and you are responsible for its lifetime, useful for constants)
 
 #### Arrays
