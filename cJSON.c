@@ -376,7 +376,7 @@ loop_end:
 /* don't ask me, but the original cJSON_SetNumberValue returns an integer or double */
 CJSON_PUBLIC(double) cJSON_SetNumberHelper(cJSON *object, double number)
 {
-    if (number >= INTMAX_MAX)
+    if (number >= (double)INTMAX_MAX)
     {
         object->valueint = INTMAX_MAX;
     }
@@ -386,7 +386,7 @@ CJSON_PUBLIC(double) cJSON_SetNumberHelper(cJSON *object, double number)
     }
     else
     {
-        object->valueint = (int)number;
+        object->valueint = (intmax_t)number;
     }
 
     return object->valuedouble = number;
@@ -545,7 +545,7 @@ static cJSON_bool print_number(const cJSON * const item, printbuffer * const out
 
     if (item->type & cJSON_NumberIsInt)
     {
-        size_t length = snprintf(NULL, 255, "%" PRIiMAX, item->valueint);
+        size_t length = snprintf(NULL, 0, "%" PRIiMAX, item->valueint);
 
         output_pointer = ensure(output_buffer, length + sizeof(""));
         if (output_pointer == NULL)
@@ -2146,6 +2146,18 @@ CJSON_PUBLIC(cJSON*) cJSON_AddNumberToObject(cJSON * const object, const char * 
     return NULL;
 }
 
+CJSON_PUBLIC(cJSON*) cJSON_AddIntToObject(cJSON * const object, const char * const name, const intmax_t number)
+{
+    cJSON *number_item = cJSON_CreateInt(number);
+    if (add_item_to_object(object, name, number_item, &global_hooks, false))
+    {
+        return number_item;
+    }
+
+    cJSON_Delete(number_item);
+    return NULL;
+}
+
 CJSON_PUBLIC(cJSON*) cJSON_AddStringToObject(cJSON * const object, const char * const name, const char * const string)
 {
     cJSON *string_item = cJSON_CreateString(string);
@@ -2440,7 +2452,7 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateNumber(double num)
         item->valuedouble = num;
 
         /* use saturation in case of overflow */
-        if (num >= INTMAX_MAX)
+        if (num >= (double)INTMAX_MAX)
         {
             item->valueint = INTMAX_MAX;
         }
@@ -2450,7 +2462,7 @@ CJSON_PUBLIC(cJSON *) cJSON_CreateNumber(double num)
         }
         else
         {
-            item->valueint = (int)num;
+            item->valueint = (intmax_t)num;
         }
     }
 
